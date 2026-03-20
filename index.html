@@ -1,0 +1,886 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>bourne.cloud — rack</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500&family=Inter:wght@300;400;500&display=swap');
+
+:root {
+  --bg:       #0d0f12;
+  --bg2:      #13161a;
+  --bg3:      #1a1e24;
+  --bg4:      #20252d;
+  --border:   rgba(255,255,255,0.06);
+  --border2:  rgba(255,255,255,0.12);
+  --text:     #e2e8f0;
+  --muted:    #5a6478;
+  --dim:      #2d3444;
+
+  --green:  #22c55e;
+  --blue:   #3b82f6;
+  --amber:  #f59e0b;
+  --purple: #8b5cf6;
+  --red:    #ef4444;
+  --teal:   #14b8a6;
+
+  --u: 44px;
+  --rack-w: 340px;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: 'Inter', sans-serif;
+  font-size: 13px;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+header {
+  padding: 20px 32px;
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+header h1 {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 13px;
+  font-weight: 400;
+  color: var(--muted);
+  letter-spacing: 0.04em;
+}
+
+header h1 strong { color: var(--text); font-weight: 500; }
+
+.status-dot {
+  width: 7px; height: 7px;
+  border-radius: 50%;
+  background: var(--green);
+  margin-left: auto;
+  box-shadow: 0 0 6px var(--green);
+}
+
+.status-label {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  color: var(--green);
+}
+
+.main {
+  display: flex;
+  flex: 1;
+  overflow: hidden;
+}
+
+/* ── RACK ─────────────────────────────── */
+.rack-wrap {
+  padding: 32px 24px 32px 32px;
+  overflow-y: auto;
+  flex-shrink: 0;
+}
+
+.rack-label {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  color: var(--muted);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  margin-bottom: 12px;
+}
+
+.rack {
+  width: var(--rack-w);
+  background: var(--bg2);
+  border: 1px solid var(--border2);
+  border-radius: 8px;
+  overflow: hidden;
+  position: relative;
+}
+
+.rack-top {
+  height: 14px;
+  background: var(--bg3);
+  border-bottom: 1px solid var(--border2);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
+.rack-bolt {
+  width: 6px; height: 6px;
+  border-radius: 50%;
+  background: var(--bg4);
+  border: 1px solid var(--border2);
+}
+
+.rack-body {
+  display: flex;
+}
+
+.rack-units-col {
+  width: 28px;
+  background: var(--bg3);
+  border-right: 1px solid var(--border);
+  flex-shrink: 0;
+}
+
+.rack-u-num {
+  height: var(--u);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 9px;
+  color: var(--dim);
+  border-bottom: 1px solid var(--border);
+}
+
+.rack-slots {
+  flex: 1;
+}
+
+/* ── RACK DEVICE ─────────────────────── */
+.rack-device {
+  border-bottom: 1px solid var(--border);
+  cursor: pointer;
+  position: relative;
+  transition: background 0.12s;
+  overflow: hidden;
+}
+
+.rack-device:hover { background: var(--bg3); }
+.rack-device.active { background: var(--bg3); }
+.rack-device.active::before {
+  content: '';
+  position: absolute;
+  left: 0; top: 0; bottom: 0;
+  width: 2px;
+  background: var(--accent, var(--blue));
+}
+
+.rack-device-inner {
+  padding: 0 12px;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.device-icon {
+  width: 28px;
+  height: 28px;
+  border-radius: 5px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  font-size: 12px;
+}
+
+.device-info { flex: 1; min-width: 0; }
+
+.device-name {
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.device-sub {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  color: var(--muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.device-ports {
+  display: flex;
+  gap: 3px;
+  align-items: center;
+  flex-shrink: 0;
+}
+
+.port {
+  width: 7px; height: 7px;
+  border-radius: 1px;
+  background: var(--dim);
+}
+
+.port.on { background: var(--green); box-shadow: 0 0 3px var(--green); }
+.port.amber { background: var(--amber); }
+
+.rack-blank {
+  border-bottom: 1px solid var(--border);
+  background: repeating-linear-gradient(
+    45deg,
+    transparent,
+    transparent 4px,
+    rgba(255,255,255,0.015) 4px,
+    rgba(255,255,255,0.015) 8px
+  );
+}
+
+.rack-bottom {
+  height: 14px;
+  background: var(--bg3);
+  border-top: 1px solid var(--border2);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
+/* ── DETAIL PANEL ────────────────────── */
+.detail {
+  flex: 1;
+  border-left: 1px solid var(--border);
+  overflow-y: auto;
+  position: relative;
+}
+
+.detail-empty {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  color: var(--dim);
+}
+
+.detail-empty svg { opacity: 0.3; }
+
+.detail-empty p {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  color: var(--muted);
+}
+
+.panel {
+  display: none;
+  padding: 28px 32px;
+  animation: fadeIn 0.15s ease;
+}
+
+.panel.visible { display: block; }
+
+@keyframes fadeIn { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: none; } }
+
+.panel-header {
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+  margin-bottom: 24px;
+  padding-bottom: 20px;
+  border-bottom: 1px solid var(--border);
+}
+
+.panel-icon {
+  width: 44px; height: 44px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 20px;
+  flex-shrink: 0;
+}
+
+.panel-title { font-size: 18px; font-weight: 500; color: var(--text); margin-bottom: 3px; }
+.panel-type {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  color: var(--muted);
+}
+
+.panel-u-badge {
+  margin-left: auto;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  color: var(--muted);
+  background: var(--bg3);
+  border: 1px solid var(--border2);
+  border-radius: 4px;
+  padding: 4px 8px;
+  white-space: nowrap;
+}
+
+.section {
+  margin-bottom: 24px;
+}
+
+.section-title {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  font-weight: 500;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--dim);
+  margin-bottom: 10px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--border);
+}
+
+.kv-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  padding: 6px 0;
+  gap: 16px;
+  border-bottom: 1px solid var(--border);
+}
+
+.kv-row:last-child { border-bottom: none; }
+
+.kv-key { color: var(--muted); font-size: 12px; flex-shrink: 0; }
+
+.kv-val {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  color: var(--text);
+  text-align: right;
+}
+
+.vm-list { display: flex; flex-direction: column; gap: 6px; }
+
+.vm-card {
+  background: var(--bg3);
+  border: 1px solid var(--border);
+  border-radius: 7px;
+  padding: 10px 14px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.vm-dot {
+  width: 7px; height: 7px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.vm-name { font-size: 12px; font-weight: 500; color: var(--text); }
+.vm-detail {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  color: var(--muted);
+  margin-top: 2px;
+}
+
+.vm-vlan {
+  margin-left: auto;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  padding: 2px 7px;
+  border-radius: 3px;
+  flex-shrink: 0;
+}
+
+.vlan-lan { background: rgba(34,197,94,0.1); color: var(--green); }
+.vlan-dmz { background: rgba(245,158,11,0.1); color: var(--amber); }
+.vlan-mgmt { background: rgba(139,92,246,0.1); color: var(--purple); }
+
+.svc-list { display: flex; flex-direction: column; gap: 4px; }
+
+.svc-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: var(--bg3);
+  border-radius: 5px;
+  padding: 7px 12px;
+  font-size: 12px;
+}
+
+.svc-name { color: var(--text); }
+.svc-port {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  color: var(--muted);
+}
+
+.tags { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 4px; }
+
+.tag {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  padding: 3px 8px;
+  border-radius: 3px;
+  border: 1px solid var(--border2);
+  color: var(--muted);
+}
+</style>
+</head>
+<body>
+
+<header>
+  <h1><strong>bourne.cloud</strong> — server rack</h1>
+  <div class="status-dot"></div>
+  <span class="status-label">online</span>
+</header>
+
+<div class="main">
+
+  <!-- RACK -->
+  <div class="rack-wrap">
+    <div class="rack-label">27U rack</div>
+    <div class="rack">
+      <div class="rack-top">
+        <div class="rack-bolt"></div>
+        <div class="rack-bolt"></div>
+        <div class="rack-bolt"></div>
+      </div>
+      <div class="rack-body">
+
+        <!-- U numbers -->
+        <div class="rack-units-col" id="u-col"></div>
+
+        <!-- Devices -->
+        <div class="rack-slots" id="slots"></div>
+
+      </div>
+      <div class="rack-bottom">
+        <div class="rack-bolt"></div>
+        <div class="rack-bolt"></div>
+        <div class="rack-bolt"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- DETAIL -->
+  <div class="detail" id="detail">
+    <div class="detail-empty" id="empty">
+      <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="2" y="2" width="20" height="8" rx="2"/><rect x="2" y="14" width="20" height="8" rx="2"/><circle cx="18" cy="6" r="1" fill="currentColor"/><circle cx="18" cy="18" r="1" fill="currentColor"/></svg>
+      <p>select a device</p>
+    </div>
+    <div id="panels"></div>
+  </div>
+
+</div>
+
+<script>
+const U = 44;
+
+const devices = [
+  {
+    id: 'patch',
+    name: 'Patch Panel',
+    sub: '24-port · cat6',
+    size: 1,
+    type: 'passive',
+    icon: '⬛',
+    iconBg: '#1a1e24',
+    accent: '#5a6478',
+    ports: [{on:true},{on:true},{on:true},{on:true},{on:true},{on:true},{on:false},{on:false}],
+    spec: {
+      'Type': 'Patch panel',
+      'Ports': '24× Cat6',
+      'U size': '1U',
+    },
+    tags: ['passive','cat6'],
+  },
+  {
+    id: 'ex3300',
+    name: 'Juniper EX3300-48P',
+    sub: '48-port PoE · access layer',
+    size: 1,
+    type: 'switch',
+    icon: '⬛',
+    iconBg: '#0f2a1a',
+    accent: '#22c55e',
+    ports: [{on:true},{on:true},{on:true},{on:true},{on:true},{on:true},{on:true},{on:false}],
+    spec: {
+      'IP': '—',
+      'Ports': '48× PoE+',
+      'Uplink': '4× SFP+',
+      'U size': '1U',
+      'VLAN': 'LAN trunk',
+    },
+    services: [
+      { name: 'WAPs (5×)', port: 'PoE' },
+      { name: 'Game consoles', port: 'PoE' },
+      { name: 'PCs / printers', port: 'PoE' },
+    ],
+    tags: ['PoE+','access layer','juniper'],
+  },
+  {
+    id: 'nbn',
+    name: 'NBN NTD',
+    sub: 'ISP handoff',
+    size: 1,
+    type: 'network',
+    icon: '⬛',
+    iconBg: '#0f1e2e',
+    accent: '#3b82f6',
+    ports: [{on:true},{on:false},{on:false},{on:false}],
+    spec: {
+      'Role': 'WAN handoff',
+      'IP': '—',
+      'Downlink': '→ Sophos Firewall',
+      'U size': '1U',
+    },
+    tags: ['WAN','ISP'],
+  },
+  {
+    id: 'tplink',
+    name: 'TP-Link SX3008F',
+    sub: '10 GbE core switch',
+    size: 1,
+    type: 'switch',
+    icon: '⬛',
+    iconBg: '#0f1e2e',
+    accent: '#3b82f6',
+    ports: [{on:true},{on:true},{on:true},{on:true},{on:true},{on:true},{on:true},{on:true}],
+    spec: {
+      'IP': '—',
+      'Ports': '8× SFP+',
+      'Speed': '10 Gbit',
+      'VLAN-aware': 'yes',
+      'U size': '1U',
+    },
+    services: [
+      { name: 'XCP-NG 01', port: '10G' },
+      { name: 'XCP-NG 02', port: '10G' },
+      { name: 'TrueNAS Scale', port: '10G' },
+      { name: 'Sophos Firewall', port: '10G' },
+      { name: 'Juniper EX3300', port: '10G' },
+    ],
+    tags: ['10 GbE','core switch','VLAN trunk'],
+  },
+  {
+    id: 'sophos',
+    name: 'Sophos Firewall',
+    sub: 'custom PC · XG/SFOS',
+    size: 2,
+    type: 'firewall',
+    icon: '⬛',
+    iconBg: '#1e0f0f',
+    accent: '#ef4444',
+    ports: [{on:true,amber:true},{on:true},{on:false},{on:false}],
+    spec: {
+      'Hardware': 'Custom PC',
+      'OS': 'Sophos SFOS',
+      'WAN IP': '—',
+      'LAN IP': '—',
+      'U size': '2U',
+    },
+    services: [
+      { name: 'IDS / IPS', port: 'inline' },
+      { name: 'NAT', port: 'WAN' },
+      { name: 'VLAN trunk', port: 'LAN' },
+      { name: 'DHCP', port: 'LAN / DMZ' },
+      { name: 'DNS forwarding', port: ':53' },
+    ],
+    tags: ['firewall','IDS/IPS','NAT','VLAN'],
+  },
+  {
+    id: 'nvr',
+    name: 'Unifi NVR',
+    sub: '2× IP cameras',
+    size: 1,
+    type: 'nvr',
+    icon: '⬛',
+    iconBg: '#0f1a2e',
+    accent: '#3b82f6',
+    ports: [{on:true},{on:true},{on:false},{on:false}],
+    spec: {
+      'IP': '—',
+      'VLAN': 'LAN',
+      'Cameras': '2× IP',
+      'U size': '1U',
+    },
+    services: [
+      { name: 'Unifi Protect', port: ':7080' },
+      { name: 'RTSP streams', port: ':7447' },
+    ],
+    tags: ['LAN','camera','unifi'],
+  },
+  {
+    id: 'blank1',
+    name: null,
+    size: 2,
+    type: 'blank',
+  },
+  {
+    id: 'xcp1',
+    name: 'XCP-NG 01',
+    sub: 'Ryzen 7 5700G · 64 GB',
+    size: 4,
+    type: 'hypervisor',
+    icon: '⬛',
+    iconBg: '#0f1a1a',
+    accent: '#14b8a6',
+    ports: [{on:true},{on:true},{on:true},{on:false}],
+    spec: {
+      'CPU': 'AMD Ryzen 7 5700G',
+      'RAM': '64 GB',
+      'IP': '—',
+      'VLAN': 'LAN',
+      'OS': 'XCP-NG',
+      'U size': '4U',
+    },
+    vms: [
+      { name: 'Talos LAN Node 01', detail: 'K8s LAN cluster · control plane', vlan: 'lan' },
+      { name: 'Talos DMZ Node 01', detail: 'K8s DMZ cluster · control plane', vlan: 'dmz' },
+      { name: 'Home Assistant', detail: 'home automation', vlan: 'lan' },
+      { name: 'Adguard 01', detail: 'primary DNS · :53', vlan: 'lan' },
+    ],
+    tags: ['hypervisor','xcp-ng','10GbE'],
+  },
+  {
+    id: 'xcp2',
+    name: 'XCP-NG 02',
+    sub: 'Ryzen 7 5700G · 64 GB',
+    size: 4,
+    type: 'hypervisor',
+    icon: '⬛',
+    iconBg: '#0f1a1a',
+    accent: '#14b8a6',
+    ports: [{on:true},{on:true},{on:true},{on:false}],
+    spec: {
+      'CPU': 'AMD Ryzen 7 5700G',
+      'RAM': '64 GB',
+      'IP': '—',
+      'VLAN': 'LAN',
+      'OS': 'XCP-NG',
+      'U size': '4U',
+    },
+    vms: [
+      { name: 'Talos LAN Node 02', detail: 'K8s LAN cluster · worker', vlan: 'lan' },
+      { name: 'Talos DMZ Node 02', detail: 'K8s DMZ cluster · worker', vlan: 'dmz' },
+      { name: 'Adguard 02', detail: 'fallback DNS · :53', vlan: 'lan' },
+      { name: 'Game Server 01', detail: 'internet-exposed', vlan: 'dmz' },
+      { name: 'Game Server 02', detail: 'internet-exposed', vlan: 'dmz' },
+      { name: 'Stream Machine', detail: 'capture / streaming', vlan: 'lan' },
+    ],
+    tags: ['hypervisor','xcp-ng','10GbE'],
+  },
+  {
+    id: 'truenas',
+    name: 'TrueNAS Scale',
+    sub: 'i7-4790 · 32 GB · ZFS',
+    size: 4,
+    type: 'nas',
+    icon: '⬛',
+    iconBg: '#1a1a0f',
+    accent: '#f59e0b',
+    ports: [{on:true},{on:true},{on:false},{on:false}],
+    spec: {
+      'CPU': 'Intel Core i7-4790',
+      'RAM': '32 GB',
+      'IP': '—',
+      'VLAN': 'LAN',
+      'FS': 'ZFS',
+      'U size': '4U',
+    },
+    services: [
+      { name: 'NFS', port: ':2049' },
+      { name: 'SMB', port: ':445' },
+      { name: 'iSCSI', port: ':3260' },
+      { name: 'TrueNAS UI', port: ':443' },
+    ],
+    vms: [
+      { name: 'Talos LAN Node 03', detail: 'K8s LAN cluster · worker', vlan: 'lan' },
+      { name: 'Talos DMZ Node 03', detail: 'K8s DMZ cluster · worker', vlan: 'dmz' },
+      { name: 'Plex', detail: 'media server · :32400', vlan: 'dmz' },
+      { name: 'Xen Orchestra', detail: 'XCP-NG management', vlan: 'lan' },
+      { name: 'AI Assistant', detail: 'local LLM inference', vlan: 'lan' },
+    ],
+    tags: ['NAS','ZFS','10GbE','hypervisor'],
+  },
+  {
+    id: 'blank2',
+    name: null,
+    size: 4,
+    type: 'blank',
+  },
+  {
+    id: 'ups',
+    name: 'Cyberpower UPS',
+    sub: 'uninterruptible power supply',
+    size: 2,
+    type: 'power',
+    icon: '⬛',
+    iconBg: '#1a1a0f',
+    accent: '#f59e0b',
+    ports: [{on:true,amber:true},{on:true,amber:true},{on:false},{on:false}],
+    spec: {
+      'Type': 'UPS',
+      'U size': '2U',
+      'Protects': 'full rack',
+    },
+    tags: ['power','UPS'],
+  },
+];
+
+function buildRack() {
+  const uCol = document.getElementById('u-col');
+  const slots = document.getElementById('slots');
+  const panels = document.getElementById('panels');
+
+  let uNum = 1;
+
+  devices.forEach(dev => {
+    // U numbers
+    for (let i = 0; i < dev.size; i++) {
+      const u = document.createElement('div');
+      u.className = 'rack-u-num';
+      u.textContent = String(uNum + i).padStart(2, '0');
+      uCol.appendChild(u);
+    }
+    uNum += dev.size;
+
+    const h = dev.size * U;
+
+    if (dev.type === 'blank') {
+      const blank = document.createElement('div');
+      blank.className = 'rack-blank';
+      blank.style.height = h + 'px';
+      slots.appendChild(blank);
+      return;
+    }
+
+    // Rack slot
+    const slot = document.createElement('div');
+    slot.className = 'rack-device';
+    slot.style.height = h + 'px';
+    slot.style.setProperty('--accent', dev.accent);
+    slot.dataset.id = dev.id;
+    slot.onclick = () => selectDevice(dev.id);
+
+    const portDots = (dev.ports || []).map(p =>
+      `<div class="port ${p.amber ? 'amber' : p.on ? 'on' : ''}"></div>`
+    ).join('');
+
+    slot.innerHTML = `
+      <div class="rack-device-inner">
+        <div class="device-icon" style="background:${dev.iconBg}; border:1px solid rgba(255,255,255,0.06)">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="${dev.accent}" stroke-width="1.5" opacity="0.9">${iconPath(dev.type)}</svg>
+        </div>
+        <div class="device-info">
+          <div class="device-name">${dev.name}</div>
+          <div class="device-sub">${dev.sub}</div>
+        </div>
+        <div class="device-ports">${portDots}</div>
+      </div>
+    `;
+    slots.appendChild(slot);
+
+    // Detail panel
+    const panel = document.createElement('div');
+    panel.className = 'panel';
+    panel.id = 'panel-' + dev.id;
+    panel.innerHTML = buildPanel(dev);
+    panels.appendChild(panel);
+  });
+}
+
+function iconPath(type) {
+  switch(type) {
+    case 'switch':   return '<rect x="2" y="7" width="20" height="10" rx="2"/><circle cx="6" cy="12" r="1" fill="currentColor"/><circle cx="10" cy="12" r="1" fill="currentColor"/>';
+    case 'firewall': return '<path d="M12 2L4 6v6c0 5 3.5 9.5 8 11 4.5-1.5 8-6 8-11V6l-8-4z"/>';
+    case 'hypervisor': return '<rect x="2" y="3" width="20" height="18" rx="2"/><path d="M8 10h8M8 14h5"/>';
+    case 'nas':      return '<ellipse cx="12" cy="8" rx="8" ry="3"/><path d="M4 8v4c0 1.7 3.6 3 8 3s8-1.3 8-3V8"/><path d="M4 12v4c0 1.7 3.6 3 8 3s8-1.3 8-3v-4"/>';
+    case 'power':    return '<path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/>';
+    case 'nvr':      return '<path d="M15 10l4.553-2.276A1 1 0 0121 8.72v6.56a1 1 0 01-1.447.894L15 14"/><rect x="3" y="7" width="12" height="10" rx="2"/>';
+    case 'network':  return '<circle cx="12" cy="12" r="10"/><path d="M2 12h20M12 2a15.3 15.3 0 010 20M12 2a15.3 15.3 0 000 20"/>';
+    case 'passive':  return '<rect x="2" y="9" width="20" height="6" rx="1"/><circle cx="6" cy="12" r="1" fill="currentColor"/><circle cx="9" cy="12" r="1" fill="currentColor"/><circle cx="12" cy="12" r="1" fill="currentColor"/><circle cx="15" cy="12" r="1" fill="currentColor"/><circle cx="18" cy="12" r="1" fill="currentColor"/>';
+    default:         return '<rect x="3" y="3" width="18" height="18" rx="2"/>';
+  }
+}
+
+function buildPanel(dev) {
+  let html = `
+    <div class="panel-header">
+      <div class="panel-icon" style="background:${dev.iconBg};border:1px solid rgba(255,255,255,0.08)">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="${dev.accent}" stroke-width="1.5">${iconPath(dev.type)}</svg>
+      </div>
+      <div>
+        <div class="panel-title">${dev.name}</div>
+        <div class="panel-type">${dev.sub}</div>
+      </div>
+      <div class="panel-u-badge">${dev.size}U</div>
+    </div>
+  `;
+
+  if (dev.spec) {
+    html += `<div class="section"><div class="section-title">Specifications</div>`;
+    Object.entries(dev.spec).forEach(([k,v]) => {
+      html += `<div class="kv-row"><span class="kv-key">${k}</span><span class="kv-val">${v}</span></div>`;
+    });
+    html += `</div>`;
+  }
+
+  if (dev.vms && dev.vms.length) {
+    html += `<div class="section"><div class="section-title">Virtual machines</div><div class="vm-list">`;
+    dev.vms.forEach(vm => {
+      const col = vm.vlan === 'dmz' ? '#f59e0b' : vm.vlan === 'mgmt' ? '#8b5cf6' : '#22c55e';
+      const vlanClass = 'vlan-' + vm.vlan;
+      html += `
+        <div class="vm-card">
+          <div class="vm-dot" style="background:${col}"></div>
+          <div>
+            <div class="vm-name">${vm.name}</div>
+            <div class="vm-detail">${vm.detail}</div>
+          </div>
+          <div class="vm-vlan ${vlanClass}">${vm.vlan.toUpperCase()}</div>
+        </div>
+      `;
+    });
+    html += `</div></div>`;
+  }
+
+  if (dev.services && dev.services.length) {
+    html += `<div class="section"><div class="section-title">Services</div><div class="svc-list">`;
+    dev.services.forEach(s => {
+      html += `<div class="svc-row"><span class="svc-name">${s.name}</span><span class="svc-port">${s.port}</span></div>`;
+    });
+    html += `</div></div>`;
+  }
+
+  if (dev.tags) {
+    html += `<div class="section"><div class="tags">`;
+    dev.tags.forEach(t => { html += `<span class="tag">${t}</span>`; });
+    html += `</div></div>`;
+  }
+
+  return html;
+}
+
+function selectDevice(id) {
+  document.querySelectorAll('.rack-device').forEach(d => d.classList.remove('active'));
+  document.querySelectorAll('.panel').forEach(p => p.classList.remove('visible'));
+
+  const slot = document.querySelector(`.rack-device[data-id="${id}"]`);
+  if (slot) slot.classList.add('active');
+
+  const panel = document.getElementById('panel-' + id);
+  if (panel) panel.classList.add('visible');
+
+  document.getElementById('empty').style.display = 'none';
+}
+
+document.getElementById('detail').addEventListener('click', e => {
+  if (e.target === document.getElementById('detail') || e.target === document.getElementById('panels')) {
+    document.querySelectorAll('.rack-device').forEach(d => d.classList.remove('active'));
+    document.querySelectorAll('.panel').forEach(p => p.classList.remove('visible'));
+    document.getElementById('empty').style.display = 'flex';
+  }
+});
+
+buildRack();
+</script>
+</body>
+</html>
