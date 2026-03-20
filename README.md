@@ -10,41 +10,7 @@ A self-hosted infrastructure built for hands-on learning in network security, se
 
 The lab is designed for education to push my technological skills.
 
-```mermaid
-graph TD
-    internet([Internet])
-    nbn[NBN NTD]
-    sophos[Sophos Firewall\nIDS/IPS · NAT · VLAN trunk]
-    core[TP-Link SX3008F\n10 GbE core switch]
-
-    internet --> nbn --> sophos --> core
-
-    subgraph LAN VLAN
-        xcp1[XCP-NG 01\nRyzen 7 5700G · 64 GB]
-        xcp2[XCP-NG 02\nRyzen 7 5700G · 64 GB]
-        nas[TrueNAS Scale\ni7-4790 · 32 GB · ZFS]
-        access[Access layer\nJuniper EX3300-48P · 5× Unifi WAP]
-    end
-
-    subgraph DMZ VLAN
-        dmz_svcs[Internet-facing services\nPlex · Game Server 01 · Game Server 02]
-        k8s_dmz[Kubernetes DMZ cluster\n3× Talos Linux nodes]
-        dmz_wl[Workloads\nTraefik · Karakeep · Ghost · Owncast · Odoo]
-    end
-
-    subgraph LAN Kubernetes
-        k8s_lan[Kubernetes LAN cluster\n3× Talos Linux nodes]
-        lan_svcs[Workloads\nTraefik · N8N · NTFY · Open WebUI\nUptime Kuma · Homarr · Romm]
-    end
-
-    core --> xcp1 & xcp2 & nas & access
-    xcp1 & xcp2 & nas --> k8s_dmz
-    xcp1 & xcp2 & nas --> k8s_lan
-    k8s_dmz --- dmz_wl
-    k8s_lan --- lan_svcs
-```
-
----
+![Home Lab Diagram](https://github.com/Kylindrias/Home-Lab/blob/main/d2.svg "Home Lab Diagram")
 
 ## Security architecture
 
