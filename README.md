@@ -1,6 +1,6 @@
 # homelab
 
-A self-hosted infrastructure built for hands-on learning in network security, segmentation, and systems administration. Everything runs on custom built servers in a 27U rack in my house.
+A self-hosted infrastructure built for hands-on learning in network security, segmentation, and systems administration. Everything runs on bare metal in a 27U rack at home.
 
 **[→ Interactive rack diagram](https://kylindrias.github.io/Home-Lab)**
 
@@ -8,7 +8,7 @@ A self-hosted infrastructure built for hands-on learning in network security, se
 
 ## Overview
 
-The lab is designed for self hosted services as well as education.
+The lab is designed for education to push my technological skills.
 
 ```mermaid
 graph TD
@@ -29,17 +29,18 @@ graph TD
     subgraph DMZ VLAN
         dmz_svcs[Internet-facing services\nPlex · Game Server 01 · Game Server 02]
         k8s_dmz[Kubernetes DMZ cluster\n3× Talos Linux nodes]
+        dmz_wl[Workloads\nTraefik · Karakeep · Ghost · Owncast · Odoo]
     end
 
     subgraph LAN Kubernetes
         k8s_lan[Kubernetes LAN cluster\n3× Talos Linux nodes]
-        lan_svcs[Internal services\nHome Assistant · Adguard · AI Assistant\nXen Orchestra · Stream Machine]
+        lan_svcs[Workloads\nTraefik · N8N · NTFY · Open WebUI\nUptime Kuma · Homarr · Romm]
     end
 
     core --> xcp1 & xcp2 & nas & access
     xcp1 & xcp2 & nas --> k8s_dmz
     xcp1 & xcp2 & nas --> k8s_lan
-    k8s_dmz --- dmz_svcs
+    k8s_dmz --- dmz_wl
     k8s_lan --- lan_svcs
 ```
 
@@ -56,14 +57,16 @@ Traffic is segmented into two VLANs enforced at the Sophos firewall:
 | LAN | Internal services, management, storage | Outbound only | Full |
 | DMZ | Internet-facing services | Inbound + outbound | Denied |
 
+The firewall enforces that DMZ hosts cannot initiate connections to the LAN under any circumstance. A compromised DMZ service has no path to internal systems.
+
 ### Dual Kubernetes clusters
 
 Rather than using namespaces or network policies alone to separate workloads, internet-facing and internal services run on entirely separate Kubernetes clusters with separate Talos nodes — one cluster per VLAN. This provides stronger isolation guarantees than a shared control plane.
 
 | Cluster | VLAN | Nodes | Workloads |
 |---------|------|-------|-----------|
-| LAN cluster | LAN | Talos nodes 01–03 | Home Assistant, Adguard, AI Assistant, Xen Orchestra |
-| DMZ cluster | DMZ | Talos nodes 04–06 | Plex, Game Server 01, Game Server 02 |
+| LAN cluster | LAN | Talos nodes 01–03 | Traefik, N8N, NTFY, Open WebUI, Uptime Kuma, Homarr, Romm |
+| DMZ cluster | DMZ | Talos nodes 04–06 | Traefik, Karakeep, Ghost, Owncast, Odoo |
 
 Each set of Talos nodes is spread across all three physical hosts (XCP-NG 01, XCP-NG 02, TrueNAS Scale) so a single host failure does not take down either cluster.
 
@@ -96,7 +99,27 @@ Redundant [AdGuard Home](https://adguard.com/en/adguard-home/overview.html) inst
 
 ---
 
-## Storage
+## Virtual machines
+
+| VM | Hypervisor | VLAN |
+|----|-----------|------|
+| Talos LAN Node 01 | XCP-NG 01 | LAN |
+| Talos DMZ Node 01 | XCP-NG 01 | DMZ |
+| Adguard 01 | XCP-NG 01 | LAN |
+| Game Server 01 | XCP-NG 01 | DMZ |
+| Game Server 02 | XCP-NG 01 | DMZ |
+| Xen Orchestra | XCP-NG 01 | LAN |
+| Talos LAN Node 02 | XCP-NG 02 | LAN |
+| Talos DMZ Node 02 | XCP-NG 02 | DMZ |
+| Adguard 02 | XCP-NG 02 | LAN |
+| Plex | XCP-NG 02 | DMZ |
+| Home Assistant | XCP-NG 02 | LAN |
+| Stream Machine | XCP-NG 02 | LAN |
+| AI Assistant | XCP-NG 02 | LAN |
+| Talos LAN Node 03 | TrueNAS Scale | LAN |
+| Talos DMZ Node 03 | TrueNAS Scale | DMZ |
+
+
 
 TrueNAS Scale manages all persistent storage via ZFS — providing checksumming, compression, snapshots, and replication. Kubernetes persistent volumes are provisioned via [Longhorn](https://longhorn.io/) backed by the ZFS pool over NFS/iSCSI.
 
@@ -104,4 +127,4 @@ TrueNAS Scale manages all persistent storage via ZFS — providing checksumming,
 
 ## Tech stack
 
-`XCP-NG` `Talos Linux` `Kubernetes` `Longhorn` `TrueNAS Scale` `ZFS` `Sophos SFOS` `Traefik` `cert-manager` `AdGuard Home` `Home Assistant` `Unifi`
+`XCP-NG` `Talos Linux` `Kubernetes` `Longhorn` `TrueNAS Scale` `ZFS` `Sophos SFOS` `Traefik` `cert-manager` `AdGuard Home` `Home Assistant` `N8N` `Ghost` `Owncast` `Odoo` `Karakeep` `Homarr` `Uptime Kuma` `Unifi`
