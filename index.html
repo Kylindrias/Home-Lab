@@ -632,10 +632,12 @@ const devices = [
       'U size': '4U',
     },
     vms: [
-      { name: 'Talos LAN Node 01', detail: 'K8s LAN cluster · control plane', vlan: 'lan' },
-      { name: 'Talos DMZ Node 01', detail: 'K8s DMZ cluster · control plane', vlan: 'dmz' },
-      { name: 'Home Assistant', detail: 'home automation', vlan: 'lan' },
+      { name: 'Talos LAN Node 01', detail: 'K8s LAN cluster · node', vlan: 'lan' },
+      { name: 'Talos DMZ Node 01', detail: 'K8s DMZ cluster · node', vlan: 'dmz' },
       { name: 'Adguard 01', detail: 'primary DNS · :53', vlan: 'lan' },
+      { name: 'Game Server 01', detail: 'internet-exposed', vlan: 'dmz' },
+      { name: 'Game Server 02', detail: 'internet-exposed', vlan: 'dmz' },
+      { name: 'Xen Orchestra', detail: 'XCP-NG management · :443', vlan: 'lan' },
     ],
     tags: ['hypervisor','xcp-ng','10GbE'],
   },
@@ -658,12 +660,13 @@ const devices = [
       'U size': '4U',
     },
     vms: [
-      { name: 'Talos LAN Node 02', detail: 'K8s LAN cluster · worker', vlan: 'lan' },
-      { name: 'Talos DMZ Node 02', detail: 'K8s DMZ cluster · worker', vlan: 'dmz' },
+      { name: 'Talos LAN Node 02', detail: 'K8s LAN cluster · node', vlan: 'lan' },
+      { name: 'Talos DMZ Node 02', detail: 'K8s DMZ cluster · node', vlan: 'dmz' },
       { name: 'Adguard 02', detail: 'fallback DNS · :53', vlan: 'lan' },
-      { name: 'Game Server 01', detail: 'internet-exposed', vlan: 'dmz' },
-      { name: 'Game Server 02', detail: 'internet-exposed', vlan: 'dmz' },
+      { name: 'Plex', detail: 'media server · :32400', vlan: 'dmz' },
+      { name: 'Home Assistant', detail: 'home automation · :8123', vlan: 'lan' },
       { name: 'Stream Machine', detail: 'capture / streaming', vlan: 'lan' },
+      { name: 'AI Assistant', detail: 'local LLM · Ollama', vlan: 'lan' },
     ],
     tags: ['hypervisor','xcp-ng','10GbE'],
   },
@@ -692,11 +695,8 @@ const devices = [
       { name: 'TrueNAS UI', port: ':443' },
     ],
     vms: [
-      { name: 'Talos LAN Node 03', detail: 'K8s LAN cluster · worker', vlan: 'lan' },
-      { name: 'Talos DMZ Node 03', detail: 'K8s DMZ cluster · worker', vlan: 'dmz' },
-      { name: 'Plex', detail: 'media server · :32400', vlan: 'dmz' },
-      { name: 'Xen Orchestra', detail: 'XCP-NG management', vlan: 'lan' },
-      { name: 'AI Assistant', detail: 'local LLM inference', vlan: 'lan' },
+      { name: 'Talos LAN Node 03', detail: 'K8s LAN cluster · node', vlan: 'lan' },
+      { name: 'Talos DMZ Node 03', detail: 'K8s DMZ cluster · node', vlan: 'dmz' },
     ],
     tags: ['NAS','ZFS','10GbE','hypervisor'],
   },
@@ -723,6 +723,56 @@ const devices = [
     },
     tags: ['power','UPS'],
   },
+  {
+    id: 'k8slan',
+    name: 'Kubernetes LAN cluster',
+    sub: '3× Talos Linux nodes',
+    size: 0,
+    type: 'k8s',
+    icon: '⬛',
+    iconBg: '#0f0f1a',
+    accent: '#8b5cf6',
+    spec: {
+      'VLAN': 'LAN',
+      'Nodes': '3× Talos Linux',
+      'Hosts': 'XCP-NG 01, XCP-NG 02, TrueNAS',
+      'Ingress': 'Traefik',
+    },
+    services: [
+      { name: 'Traefik', port: ':80 / :443' },
+      { name: 'N8N', port: 'internal' },
+      { name: 'NTFY', port: 'internal' },
+      { name: 'Open WebUI', port: 'internal' },
+      { name: 'Uptime Kuma', port: 'internal' },
+      { name: 'Homarr', port: 'internal' },
+      { name: 'Romm', port: 'internal' },
+    ],
+    tags: ['LAN','Talos','Kubernetes','Longhorn'],
+  },
+  {
+    id: 'k8sdmz',
+    name: 'Kubernetes DMZ cluster',
+    sub: '3× Talos Linux nodes',
+    size: 0,
+    type: 'k8s',
+    icon: '⬛',
+    iconBg: '#1a100f',
+    accent: '#f59e0b',
+    spec: {
+      'VLAN': 'DMZ',
+      'Nodes': '3× Talos Linux',
+      'Hosts': 'XCP-NG 01, XCP-NG 02, TrueNAS',
+      'Ingress': 'Traefik',
+    },
+    services: [
+      { name: 'Traefik', port: ':80 / :443' },
+      { name: 'Karakeep', port: 'internet-facing' },
+      { name: 'Ghost', port: 'internet-facing' },
+      { name: 'Owncast', port: 'internet-facing' },
+      { name: 'Odoo', port: 'internet-facing' },
+    ],
+    tags: ['DMZ','Talos','Kubernetes','internet-facing'],
+  },
 ];
 
 function buildRack() {
@@ -733,7 +783,16 @@ function buildRack() {
   let uNum = 1;
 
   devices.forEach(dev => {
-    // U numbers
+    // Always build detail panel
+    const panel = document.createElement('div');
+    panel.className = 'panel';
+    panel.id = 'panel-' + dev.id;
+    panel.innerHTML = buildPanel(dev);
+    panels.appendChild(panel);
+
+    // Skip rack rendering for virtual entries
+    if (dev.size === 0) return;
+
     for (let i = 0; i < dev.size; i++) {
       const u = document.createElement('div');
       u.className = 'rack-u-num';
@@ -752,7 +811,6 @@ function buildRack() {
       return;
     }
 
-    // Rack slot
     const slot = document.createElement('div');
     slot.className = 'rack-device';
     slot.style.height = h + 'px';
@@ -777,14 +835,37 @@ function buildRack() {
       </div>
     `;
     slots.appendChild(slot);
-
-    // Detail panel
-    const panel = document.createElement('div');
-    panel.className = 'panel';
-    panel.id = 'panel-' + dev.id;
-    panel.innerHTML = buildPanel(dev);
-    panels.appendChild(panel);
   });
+
+  // K8s cluster cards below rack
+  const clusterDevs = devices.filter(d => d.size === 0);
+  if (clusterDevs.length) {
+    const wrap = document.getElementById('rack-wrap') || document.querySelector('.rack-wrap');
+    const clusterSection = document.createElement('div');
+    clusterSection.style.cssText = 'margin-top:20px';
+    clusterSection.innerHTML = `<div class="rack-label" style="margin-bottom:10px">kubernetes clusters</div>`;
+    const grid = document.createElement('div');
+    grid.style.cssText = 'display:flex;flex-direction:column;gap:8px;width:var(--rack-w)';
+    clusterDevs.forEach(dev => {
+      const card = document.createElement('div');
+      card.style.cssText = `background:var(--bg2);border:1px solid ${dev.accent}33;border-radius:8px;padding:10px 14px;cursor:pointer;transition:background 0.12s;display:flex;align-items:center;gap:10px;`;
+      card.dataset.id = dev.id;
+      card.onclick = () => selectDevice(dev.id);
+      card.innerHTML = `
+        <div class="device-icon" style="background:${dev.iconBg};border:1px solid rgba(255,255,255,0.06);width:28px;height:28px;border-radius:5px;display:flex;align-items:center;justify-content:center;flex-shrink:0">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="${dev.accent}" stroke-width="1.5">${iconPath(dev.type)}</svg>
+        </div>
+        <div style="flex:1;min-width:0">
+          <div class="device-name" style="font-size:12px">${dev.name}</div>
+          <div class="device-sub">${dev.sub}</div>
+        </div>
+        <div style="font-family:'JetBrains Mono',monospace;font-size:10px;padding:2px 7px;border-radius:3px;background:${dev.accent}18;color:${dev.accent}">${dev.tags[0]}</div>
+      `;
+      grid.appendChild(card);
+    });
+    clusterSection.appendChild(grid);
+    wrap.appendChild(clusterSection);
+  }
 }
 
 function iconPath(type) {
@@ -796,6 +877,7 @@ function iconPath(type) {
     case 'power':    return '<path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/>';
     case 'nvr':      return '<path d="M15 10l4.553-2.276A1 1 0 0121 8.72v6.56a1 1 0 01-1.447.894L15 14"/><rect x="3" y="7" width="12" height="10" rx="2"/>';
     case 'network':  return '<circle cx="12" cy="12" r="10"/><path d="M2 12h20M12 2a15.3 15.3 0 010 20M12 2a15.3 15.3 0 000 20"/>';
+    case 'k8s':      return '<path d="M12 2l9 4.5v9L12 20l-9-4.5v-9L12 2z"/><circle cx="12" cy="12" r="2" fill="currentColor"/>';
     case 'passive':  return '<rect x="2" y="9" width="20" height="6" rx="1"/><circle cx="6" cy="12" r="1" fill="currentColor"/><circle cx="9" cy="12" r="1" fill="currentColor"/><circle cx="12" cy="12" r="1" fill="currentColor"/><circle cx="15" cy="12" r="1" fill="currentColor"/><circle cx="18" cy="12" r="1" fill="currentColor"/>';
     default:         return '<rect x="3" y="3" width="18" height="18" rx="2"/>';
   }
