@@ -2,7 +2,7 @@
 
 A self-hosted infrastructure built for hands-on learning in network security, segmentation, and systems administration. Everything runs on custom built servers in a 27U rack in my house.
 
-**[→ Interactive rack diagram](https://kylindrias.github.io/homelab)**
+**[→ Interactive rack diagram](https://kylindrias.github.io/Home-Lab)**
 
 ---
 
