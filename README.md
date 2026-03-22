@@ -40,6 +40,11 @@ Each set of Talos nodes is spread across all three physical hosts (XCP-NG 01, XC
 
 Kubernetes nodes run [Talos Linux](https://www.talos.dev/) — an immutable, API-driven OS with no SSH access and no shell. The attack surface is minimal by design: the OS cannot be modified at runtime, and all management is performed via `talosctl` over mTLS.
 
+
+# Network Topology
+
+![Network Topology Diagram](https://github.com/Kylindrias/Home-Lab/blob/main/network-topology.svg "Network Topology")
+
 ### DNS filtering
 
 Redundant [AdGuard Home](https://adguard.com/en/adguard-home/overview.html) instances provide network-wide DNS filtering and ad blocking for LAN clients, with the Sophos firewall configured to intercept and redirect all DNS queries to prevent bypassing.
